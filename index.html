@@ -1,33 +1,110 @@
-<!doctype html>
-<html class="no-js" lang="">
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title></title>
-  <link rel="stylesheet" href="css/style.css">
-  <meta name="description" content="">
-
-  <meta property="og:title" content="">
-  <meta property="og:type" content="">
-  <meta property="og:url" content="">
-  <meta property="og:image" content="">
-  <meta property="og:image:alt" content="">
-
-  <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icon.png">
-
-  <link rel="manifest" href="site.webmanifest">
-  <meta name="theme-color" content="#fafafa">
+  <meta charset="UTF-8">
+  <title>WebGL Project - Task P1 Complete</title>
+  <style>
+    body { margin: 0; overflow: hidden; background-color: #000; }
+    canvas { display: block; }
+  </style>
 </head>
-
 <body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-  <!-- Add your site or application content here -->
-  <p>Hello world! This is HTML5 Boilerplate.</p>
-  <script src="js/app.js"></script>
+<script>
+  // ==========================================
+  // 1. SCENE SETUP & HORIZON (P1 Requirement)
+  // ==========================================
+  const scene = new THREE.Scene();
 
+  // Load the 360-degree starry night sky
+  const textureLoader = new THREE.TextureLoader();
+  const skyTexture = textureLoader.load('textures/sky.jpg');
+  skyTexture.mapping = THREE.EquirectangularReflectionMapping;
+  skyTexture.colorSpace = THREE.SRGBColorSpace;
+  scene.background = skyTexture; // Fulfills: Adaugarea de texturi pentru orizont
+
+  // ==========================================
+  // 2. CAMERA & RENDERER SETUP (P3 Prep)
+  // ==========================================
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 10, 30); // Raised camera slightly to see the relief better
+  camera.lookAt(0, 0, 0);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true; // Crucial for P3 shadows
+  document.body.appendChild(renderer.domElement);
+
+  // ==========================================
+  // 3. TERRAIN & RELIEF (P1 Requirements)
+  // ==========================================
+  // Create a plane with many segments (64x64) so it can bend into hills
+  const planeGeometry = new THREE.PlaneGeometry(200, 200, 64, 64);
+
+  // Modify vertex heights to create relief (mountains/valleys)
+  const positions = planeGeometry.attributes.position.array;
+  for (let i = 0; i < positions.length; i += 3) {
+    const x = positions[i];
+    const y = positions[i + 1];
+
+    // Math function to generate randomized rolling hills
+    // Fulfills: Adaugarea unei zone de relief
+    positions[i + 2] = Math.sin(x / 10) * Math.cos(y / 10) * 5;
+  }
+
+  // Recompute normals so the lighting reacts properly to the new hills
+  planeGeometry.computeVertexNormals();
+
+  // Load Base Textures (Rock)
+  // Fulfills: Adaugarea de texturi pentru baza
+  const rockColor = textureLoader.load('textures/rock.jpg');
+
+
+  // Tile the textures so they don't stretch
+  rockColor.wrapS = rockColor.wrapT = THREE.RepeatWrapping;
+  rockColor.repeat.set(20, 20);
+
+
+  const planeMaterial = new THREE.MeshStandardMaterial({
+    map: rockColor,
+    normalMap: rockColor,
+    roughness: 0.9
+  });
+
+  const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+  plane.rotation.x = -Math.PI / 2; // Lay the ground flat
+  plane.receiveShadow = true;
+  scene.add(plane);
+
+  // ==========================================
+  // 4. LIGHTING SETUP (P3 Prep)
+  // ==========================================
+  // Ambient light so the shadows aren't pitch black
+  const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+  scene.add(ambientLight);
+
+  // Main directional light (acting as moonlight)
+  const moonLight = new THREE.DirectionalLight(0xaaccff, 0.8);
+  moonLight.position.set(50, 50, 20);
+  moonLight.castShadow = true;
+  scene.add(moonLight);
+
+  // ==========================================
+  // 5. ANIMATION LOOP & WINDOW RESIZING
+  // ==========================================
+  function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  // Ensure the canvas scales correctly if the browser window changes size
+  window.addEventListener('resize', () => {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+  });
+</script>
 </body>
-
 </html>
