@@ -286,21 +286,42 @@
     if (keys['a']) playerCar.rotation.y += 0.06;
     if (keys['d']) playerCar.rotation.y -= 0.06;
 
+    // --- TERRAIN FOLLOWING MATH ---
+    let px = playerCar.position.x;
+    let pz = playerCar.position.z;
+
+    // Calculate the exact height of the ground directly under the car's current X/Z
+    let pHeight = Math.sin(px / 10) * Math.cos(pz / 10) * 5;
+    let pd = Math.sqrt((px / 1.5) * (px / 1.5) + (pz * pz));
+    const pTrackHeight = 0.5;
+
+    // Check if the car is inside the flattened bulldozer valley
+    if (pd >= 25 && pd <= 45) {
+      if (pd >= 30 && pd <= 40) pHeight = pTrackHeight;
+      else if (pd > 25 && pd < 30) pHeight = pHeight * (1 - ((pd - 25) / 5)) + pTrackHeight * ((pd - 25) / 5);
+      else if (pd > 40 && pd < 45) pHeight = pHeight * (1 - ((45 - pd) / 5)) + pTrackHeight * ((45 - pd) / 5);
+    }
+
+    // Snap the car's Y position to the ground
+    playerCar.position.y = pHeight + 0.5;
+
     // Update Player Hitbox
     playerCar.updateMatrixWorld();
     playerHitbox.setFromObject(playerCar);
 
-    // Collision Check
+    // Collision Check (Trees)
     for (let treeBox of treeHitboxes) {
       if (playerHitbox.intersectsBox(treeBox)) {
         playerCar.position.copy(oldPosition);
         break;
       }
-    }
+    } // FIXED: Closed the for-loop correctly
 
+    // FIXED: Restored the missing render calls
     controls.update();
     renderer.render(scene, camera);
   }
+
   animate();
 
   window.addEventListener('resize', () => {
