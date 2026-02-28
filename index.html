@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>WebGL Project - Tasks P1, P2 & P3 (Controls)</title>
+  <title>WebGL Project - Final Master File (P1, P2, P3)</title>
   <style>
     body { margin: 0; overflow: hidden; background-color: #000; }
     canvas { display: block; }
@@ -33,7 +33,8 @@
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = true; // Crucial for P3 shadows
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer, more realistic shadows
   document.body.appendChild(renderer.domElement);
 
   // ==========================================
@@ -42,7 +43,7 @@
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
-  controls.maxPolarAngle = Math.PI / 2 - 0.05; // Stop camera from going underground
+  controls.maxPolarAngle = Math.PI / 2 - 0.05;
 
   // ==========================================
   // 4. TERRAIN & RELIEF (P1)
@@ -58,6 +59,7 @@
     let d = Math.sqrt((x / 1.5) * (x / 1.5) + (y * y));
     const trackHeight = 0.5;
 
+    // The Bulldozer Math
     if (d >= 25 && d <= 45) {
       if (d >= 30 && d <= 40) {
         height = trackHeight;
@@ -74,7 +76,7 @@
 
   planeGeometry.computeVertexNormals();
 
-  const rockColor = textureLoader.load('textures/rock_color.jpg');
+  const rockColor = textureLoader.load('textures/rock.jpg');
   rockColor.wrapS = rockColor.wrapT = THREE.RepeatWrapping;
   rockColor.repeat.set(25, 25);
 
@@ -89,12 +91,12 @@
   scene.add(plane);
 
   // ==========================================
-  // 5. GLOBAL LIGHTING SETUP
+  // 5. GLOBAL LIGHTING SETUP (Dimmed for Nighttime)
   // ==========================================
-  const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
   scene.add(ambientLight);
 
-  const moonLight = new THREE.DirectionalLight(0xaaccff, 0.8);
+  const moonLight = new THREE.DirectionalLight(0xaaccff, 0.3);
   moonLight.position.set(50, 50, 20);
   moonLight.castShadow = true;
   scene.add(moonLight);
@@ -104,7 +106,7 @@
   // ==========================================
   const trackGeometry = new THREE.RingGeometry(30, 40, 64);
 
-  const asphaltColor = textureLoader.load('textures/asphalt.jpg');
+  const asphaltColor = textureLoader.load('textures/road.jpg');
   asphaltColor.wrapS = asphaltColor.wrapT = THREE.RepeatWrapping;
   asphaltColor.repeat.set(40, 40);
 
@@ -157,11 +159,59 @@
   }
 
   // ==========================================
-  // 8. ANIMATION LOOP & RESIZING
+  // 8. STREETLIGHTS (P3: Overlapping Shadows)
+  // ==========================================
+  const poleGeo = new THREE.CylinderGeometry(0.2, 0.2, 8);
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+
+  const numLights = 8;
+  for (let i = 0; i < numLights; i++) {
+    let angle = (i / numLights) * Math.PI * 2;
+    let radius = 42;
+    let x = Math.cos(angle) * radius * 1.5;
+    let z = Math.sin(angle) * radius;
+
+    let height = Math.sin(x / 10) * Math.cos(z / 10) * 5;
+    let d = Math.sqrt((x / 1.5) * (x / 1.5) + (z * z));
+    const trackHeight = 0.5;
+    if (d >= 25 && d <= 45) {
+      if (d >= 30 && d <= 40) height = trackHeight;
+      else if (d > 25 && d < 30) height = height * (1 - ((d - 25) / 5)) + trackHeight * ((d - 25) / 5);
+      else if (d > 40 && d < 45) height = height * (1 - ((45 - d) / 5)) + trackHeight * ((45 - d) / 5);
+    }
+
+    // The physical lamppost
+    let pole = new THREE.Mesh(poleGeo, poleMat);
+    pole.position.set(x, height + 4, z);
+    pole.castShadow = true;
+    scene.add(pole);
+
+    // The light emitting from the top
+    let spotLight = new THREE.SpotLight(0xffddaa, 2);
+    spotLight.position.set(x, height + 8, z);
+
+    spotLight.castShadow = true;
+    spotLight.angle = Math.PI / 4;
+    spotLight.penumbra = 0.5;
+    spotLight.distance = 60;
+    spotLight.shadow.mapSize.width = 1024;
+    spotLight.shadow.mapSize.height = 1024;
+
+    // Aim the light at the track
+    let target = new THREE.Object3D();
+    target.position.set(Math.cos(angle) * 35 * 1.5, height, Math.sin(angle) * 35);
+    scene.add(target);
+    spotLight.target = target;
+
+    scene.add(spotLight);
+  }
+
+  // ==========================================
+  // 9. ANIMATION LOOP & RESIZING
   // ==========================================
   function animate() {
     requestAnimationFrame(animate);
-    controls.update(); // Required for smooth damping
+    controls.update();
     renderer.render(scene, camera);
   }
   animate();
