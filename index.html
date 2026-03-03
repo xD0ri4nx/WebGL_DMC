@@ -13,9 +13,8 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
 <script>
-  // ==========================================
+
   // 1. SCENE SETUP & HORIZON (P1)
-  // ==========================================
   const scene = new THREE.Scene();
 
   const textureLoader = new THREE.TextureLoader();
@@ -24,9 +23,8 @@
   skyTexture.colorSpace = THREE.SRGBColorSpace;
   scene.background = skyTexture;
 
-  // ==========================================
+
   // 2. CAMERA & RENDERER SETUP
-  // ==========================================
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.set(0, 80, 100);
   camera.lookAt(0, 0, 0);
@@ -37,17 +35,13 @@
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
 
-  // ==========================================
   // 3. CAMERA CONTROLS (P3)
-  // ==========================================
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
   controls.maxPolarAngle = Math.PI / 2 - 0.05;
 
-  // ==========================================
   // 4. TERRAIN & RELIEF (P1)
-  // ==========================================
   const planeGeometry = new THREE.PlaneGeometry(250, 250, 256, 256);
   const positions = planeGeometry.attributes.position.array;
 
@@ -89,9 +83,7 @@
   plane.receiveShadow = true;
   scene.add(plane);
 
-  // ==========================================
   // 5. GLOBAL LIGHTING SETUP
-  // ==========================================
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
   scene.add(ambientLight);
 
@@ -100,9 +92,7 @@
   moonLight.castShadow = true;
   scene.add(moonLight);
 
-  // ==========================================
   // 6. TRACK GEOMETRY & TEXTURE (P2)
-  // ==========================================
   const trackGeometry = new THREE.RingGeometry(30, 40, 64);
 
   const asphaltColor = textureLoader.load('textures/road.jpg');
@@ -122,9 +112,7 @@
   track.receiveShadow = true;
   scene.add(track);
 
-  // ==========================================
   // 7. STATIC OBJECTS & HITBOXES (P2 & C1)
-  // ==========================================
   const trunkGeo = new THREE.CylinderGeometry(0.5, 0.5, 3);
   const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4A2F1D });
   const leavesGeo = new THREE.ConeGeometry(2.5, 5, 8);
@@ -164,9 +152,7 @@
     scene.add(leaves);
   }
 
-  // ==========================================
   // 8. STREETLIGHTS (P3)
-  // ==========================================
   const poleGeo = new THREE.CylinderGeometry(0.2, 0.2, 8);
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
 
@@ -207,9 +193,7 @@
     scene.add(spotLight);
   }
 
-  // ==========================================
   // 9. MOVING OBJECTS (C2: Predefined & Random)
-  // ==========================================
   // Predefined: Red Car
   const redCarGeo = new THREE.BoxGeometry(2, 1, 4);
   const redCarMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xaa0000 });
@@ -235,9 +219,7 @@
     drones.push(drone);
   }
 
-  // ==========================================
   // 10. CONTROLLABLE OBJECT (C1: Player Car)
-  // ==========================================
   const playerGeo = new THREE.BoxGeometry(2, 1, 4);
   const playerMat = new THREE.MeshStandardMaterial({ color: 0x0066ff });
   const playerCar = new THREE.Mesh(playerGeo, playerMat);
@@ -252,9 +234,7 @@
 
   const playerHitbox = new THREE.Box3();
 
-  // ==========================================
   // 11. MASTER ANIMATION LOOP
-  // ==========================================
   function animate() {
     requestAnimationFrame(animate);
 
@@ -315,9 +295,9 @@
         playerCar.position.copy(oldPosition);
         break;
       }
-    } // FIXED: Closed the for-loop correctly
+    }
 
-    // FIXED: Restored the missing render calls
+    // Final render
     controls.update();
     renderer.render(scene, camera);
   }
