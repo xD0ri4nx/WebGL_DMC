@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>WebGL Project - Final Master File (P1, P2, P3, C1, C2)</title>
+  <title>WebGL Project - Martian Edition (P1, P2, P3, C1, C2)</title>
   <style>
     body { margin: 0; overflow: hidden; background-color: #000; }
     canvas { display: block; }
@@ -13,8 +13,9 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
 <script>
-
+  // ==========================================
   // 1. SCENE SETUP & HORIZON (P1)
+  // ==========================================
   const scene = new THREE.Scene();
 
   const textureLoader = new THREE.TextureLoader();
@@ -23,8 +24,9 @@
   skyTexture.colorSpace = THREE.SRGBColorSpace;
   scene.background = skyTexture;
 
-
+  // ==========================================
   // 2. CAMERA & RENDERER SETUP
+  // ==========================================
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.set(0, 80, 100);
   camera.lookAt(0, 0, 0);
@@ -35,13 +37,17 @@
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
 
+  // ==========================================
   // 3. CAMERA CONTROLS (P3)
+  // ==========================================
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
   controls.maxPolarAngle = Math.PI / 2 - 0.05;
 
-  // 4. TERRAIN & RELIEF (P1)
+  // ==========================================
+  // 4. TERRAIN & RELIEF (P1 - Martian Tint)
+  // ==========================================
   const planeGeometry = new THREE.PlaneGeometry(250, 250, 256, 256);
   const positions = planeGeometry.attributes.position.array;
 
@@ -75,7 +81,8 @@
 
   const planeMaterial = new THREE.MeshStandardMaterial({
     map: rockColor,
-    roughness: 0.9
+    roughness: 0.9,
+    color: 0xcc6644
   });
 
   const plane = new THREE.Mesh(planeGeometry, planeMaterial);
@@ -83,19 +90,23 @@
   plane.receiveShadow = true;
   scene.add(plane);
 
-  // 5. GLOBAL LIGHTING SETUP
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+  // ==========================================
+  // 5. GLOBAL LIGHTING SETUP (Warm / Dusty)
+  // ==========================================
+  const ambientLight = new THREE.AmbientLight(0xffccaa, 0.5);
   scene.add(ambientLight);
 
-  const moonLight = new THREE.DirectionalLight(0xaaccff, 0.3);
+  const moonLight = new THREE.DirectionalLight(0xffaa88, 0.4);
   moonLight.position.set(50, 50, 20);
   moonLight.castShadow = true;
   scene.add(moonLight);
 
+  // ==========================================
   // 6. TRACK GEOMETRY & TEXTURE (P2)
+  // ==========================================
   const trackGeometry = new THREE.RingGeometry(30, 40, 64);
 
-  const asphaltColor = textureLoader.load('textures/road.jpg');
+  const asphaltColor = textureLoader.load('textures/rock.jpg');
   asphaltColor.wrapS = asphaltColor.wrapT = THREE.RepeatWrapping;
   asphaltColor.repeat.set(40, 40);
 
@@ -112,15 +123,13 @@
   track.receiveShadow = true;
   scene.add(track);
 
-  // 7. STATIC OBJECTS & HITBOXES (P2 & C1)
-  const trunkGeo = new THREE.CylinderGeometry(0.5, 0.5, 3);
-  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4A2F1D });
-  const leavesGeo = new THREE.ConeGeometry(2.5, 5, 8);
-  const leavesMat = new THREE.MeshStandardMaterial({ color: 0x1B4D2E });
+  // ==========================================
+  // 7. MARTIAN ROCK FORMATIONS (P2 & C1)
+  // ==========================================
+  const rockHitboxes = [];
+  const baseRockGeo = new THREE.DodecahedronGeometry(1, 0);
 
-  const treeHitboxes = [];
-
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 25; i++) {
     let angle = Math.random() * Math.PI * 2;
     let radius = Math.random() > 0.4 ? 50 + Math.random() * 40 : 5 + Math.random() * 15;
 
@@ -136,23 +145,40 @@
       else if (d > 40 && d < 45) height = height * (1 - ((45 - d) / 5)) + trackHeight * ((45 - d) / 5);
     }
 
-    let trunk = new THREE.Mesh(trunkGeo, trunkMat);
-    trunk.position.set(x, height + 1.5, z);
-    trunk.castShadow = true;
-    scene.add(trunk);
+    const r = 0.4 + Math.random() * 0.3;
+    const g = 0.1 + Math.random() * 0.1;
+    const b = 0.0 + Math.random() * 0.1;
 
-    // Create collision bounds for the tree
-    trunk.updateMatrixWorld();
-    const hitbox = new THREE.Box3().setFromObject(trunk);
-    treeHitboxes.push(hitbox);
+    const rockMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(r, g, b),
+      roughness: 0.9,
+      metalness: 0.1
+    });
 
-    let leaves = new THREE.Mesh(leavesGeo, leavesMat);
-    leaves.position.set(x, height + 4.5, z);
-    leaves.castShadow = true;
-    scene.add(leaves);
+    let rock = new THREE.Mesh(baseRockGeo, rockMat);
+
+    const baseScale = 2.0 + Math.random() * 3.0;
+    const scaleX = baseScale * (0.8 + Math.random() * 0.4);
+    const scaleY = baseScale * (1.5 + Math.random() * 1.5);
+    const scaleZ = baseScale * (0.8 + Math.random() * 0.4);
+    rock.scale.set(scaleX, scaleY, scaleZ);
+
+    rock.rotation.y = Math.random() * Math.PI;
+    rock.rotation.z = (Math.random() - 0.5) * 0.2;
+
+    rock.position.set(x, height + scaleY, z);
+    rock.castShadow = true;
+    rock.receiveShadow = true;
+    scene.add(rock);
+
+    rock.updateMatrixWorld();
+    const hitbox = new THREE.Box3().setFromObject(rock);
+    rockHitboxes.push(hitbox);
   }
 
+  // ==========================================
   // 8. STREETLIGHTS (P3)
+  // ==========================================
   const poleGeo = new THREE.CylinderGeometry(0.2, 0.2, 8);
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
 
@@ -193,8 +219,9 @@
     scene.add(spotLight);
   }
 
+  // ==========================================
   // 9. MOVING OBJECTS (C2: Predefined & Random)
-  // Predefined: Red Car
+  // ==========================================
   const redCarGeo = new THREE.BoxGeometry(2, 1, 4);
   const redCarMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xaa0000 });
   const redCar = new THREE.Mesh(redCarGeo, redCarMat);
@@ -202,7 +229,7 @@
   scene.add(redCar);
   let redCarAngle = 0;
 
-  // Random: Green Drones
+  // Drones
   const drones = [];
   const droneGeo = new THREE.SphereGeometry(0.5, 8, 8);
   const droneMat = new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00 });
@@ -210,16 +237,20 @@
   for(let i = 0; i < 5; i++) {
     let drone = new THREE.Mesh(droneGeo, droneMat);
     drone.position.set(Math.random() * 20 - 10, 5, Math.random() * 20 - 10);
+
+    // Notice Y velocity is 0 now. Hover math handles Y!
     drone.userData.velocity = new THREE.Vector3(
-      (Math.random() - 0.5) * 0.2,
-      (Math.random() - 0.5) * 0.2,
-      (Math.random() - 0.5) * 0.2
+      (Math.random() - 0.5) * 0.3,
+      0,
+      (Math.random() - 0.5) * 0.3
     );
     scene.add(drone);
     drones.push(drone);
   }
 
+  // ==========================================
   // 10. CONTROLLABLE OBJECT (C1: Player Car)
+  // ==========================================
   const playerGeo = new THREE.BoxGeometry(2, 1, 4);
   const playerMat = new THREE.MeshStandardMaterial({ color: 0x0066ff });
   const playerCar = new THREE.Mesh(playerGeo, playerMat);
@@ -234,11 +265,13 @@
 
   const playerHitbox = new THREE.Box3();
 
+  // ==========================================
   // 11. MASTER ANIMATION LOOP
+  // ==========================================
   function animate() {
     requestAnimationFrame(animate);
 
-    // Animate Red Car (Predefined Path)
+    // --- Predefined Path (Red Car) ---
     redCarAngle += 0.015;
     const trackRadius = 35;
     const currentX = Math.cos(redCarAngle) * trackRadius * 1.5;
@@ -249,55 +282,78 @@
     const nextZ = Math.sin(redCarAngle + 0.1) * trackRadius;
     redCar.lookAt(nextX, 1.01, nextZ);
 
-    // Animate Green Drones (Random Path)
+    // --- Hovering & Gliding (Green Drones) ---
     for (let drone of drones) {
-      drone.position.add(drone.userData.velocity);
-      if(drone.position.y < 2 || drone.position.y > 10) drone.userData.velocity.y *= -1;
-      if(drone.position.x < -20 || drone.position.x > 20) drone.userData.velocity.x *= -1;
-      if(drone.position.z < -20 || drone.position.z > 20) drone.userData.velocity.z *= -1;
+      // Move strictly horizontally
+      drone.position.x += drone.userData.velocity.x;
+      drone.position.z += drone.userData.velocity.z;
+
+      // Keep inside a wide boundary
+      if(drone.position.x < -40 || drone.position.x > 40) drone.userData.velocity.x *= -1;
+      if(drone.position.z < -40 || drone.position.z > 40) drone.userData.velocity.z *= -1;
+
+      // 1. Check ground height beneath drone
+      let dx = drone.position.x;
+      let dz = drone.position.z;
+      let dHeight = Math.sin(dx / 10) * Math.cos(dz / 10) * 5;
+      let dDist = Math.sqrt((dx / 1.5) * (dx / 1.5) + (dz * dz));
+
+      if (dDist >= 25 && dDist <= 45) {
+        if (dDist >= 30 && dDist <= 40) dHeight = 0.5;
+        else if (dDist > 25 && dDist < 30) dHeight = dHeight * (1 - ((dDist - 25) / 5)) + 0.5 * ((dDist - 25) / 5);
+        else if (dDist > 40 && dDist < 45) dHeight = dHeight * (1 - ((45 - dDist) / 5)) + 0.5 * ((45 - dDist) / 5);
+      }
+
+      // Base target height: float 2 units above the dirt
+      let targetY = dHeight + 2.0;
+
+      // 2. Check rock heights beneath drone
+      for (let rockBox of rockHitboxes) {
+        // If the drone is inside the X/Z space of a rock
+        if (dx >= rockBox.min.x && dx <= rockBox.max.x &&
+          dz >= rockBox.min.z && dz <= rockBox.max.z) {
+          // Target height becomes the top of the rock + a 1.5 unit gap
+          targetY = Math.max(targetY, rockBox.max.y + 1.5);
+        }
+      }
+
+      // 3. Smoothly glide up or down towards the target height
+      drone.position.y += (targetY - drone.position.y) * 0.1;
     }
 
-    // Player Movement & Collision Logic
+    // --- Player Movement & Off-Roading ---
     const oldPosition = playerCar.position.clone();
 
-    // Movement speeds
     if (keys['w']) playerCar.translateZ(-0.5);
     if (keys['s']) playerCar.translateZ(0.5);
     if (keys['a']) playerCar.rotation.y += 0.06;
     if (keys['d']) playerCar.rotation.y -= 0.06;
 
-    // --- TERRAIN FOLLOWING MATH ---
     let px = playerCar.position.x;
     let pz = playerCar.position.z;
 
-    // Calculate the exact height of the ground directly under the car's current X/Z
     let pHeight = Math.sin(px / 10) * Math.cos(pz / 10) * 5;
     let pd = Math.sqrt((px / 1.5) * (px / 1.5) + (pz * pz));
-    const pTrackHeight = 0.5;
 
-    // Check if the car is inside the flattened bulldozer valley
     if (pd >= 25 && pd <= 45) {
-      if (pd >= 30 && pd <= 40) pHeight = pTrackHeight;
-      else if (pd > 25 && pd < 30) pHeight = pHeight * (1 - ((pd - 25) / 5)) + pTrackHeight * ((pd - 25) / 5);
-      else if (pd > 40 && pd < 45) pHeight = pHeight * (1 - ((45 - pd) / 5)) + pTrackHeight * ((45 - pd) / 5);
+      if (pd >= 30 && pd <= 40) pHeight = 0.5;
+      else if (pd > 25 && pd < 30) pHeight = pHeight * (1 - ((pd - 25) / 5)) + 0.5 * ((pd - 25) / 5);
+      else if (pd > 40 && pd < 45) pHeight = pHeight * (1 - ((45 - pd) / 5)) + 0.5 * ((45 - pd) / 5);
     }
 
-    // Snap the car's Y position to the ground
     playerCar.position.y = pHeight + 0.5;
 
-    // Update Player Hitbox
+    // --- Player Rock Collisions ---
     playerCar.updateMatrixWorld();
     playerHitbox.setFromObject(playerCar);
 
-    // Collision Check (Trees)
-    for (let treeBox of treeHitboxes) {
-      if (playerHitbox.intersectsBox(treeBox)) {
+    for (let rockBox of rockHitboxes) {
+      if (playerHitbox.intersectsBox(rockBox)) {
         playerCar.position.copy(oldPosition);
         break;
       }
     }
 
-    // Final render
     controls.update();
     renderer.render(scene, camera);
   }
