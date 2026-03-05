@@ -19,7 +19,7 @@
   const scene = new THREE.Scene();
 
   const textureLoader = new THREE.TextureLoader();
-  const skyTexture = textureLoader.load('textures/sky.jpg');
+  const skyTexture = textureLoader.load('textures/marsrocks.jpg');
   skyTexture.mapping = THREE.EquirectangularReflectionMapping;
   skyTexture.colorSpace = THREE.SRGBColorSpace;
   scene.background = skyTexture;
@@ -147,7 +147,7 @@
 
     const r = 0.4 + Math.random() * 0.3;
     const g = 0.1 + Math.random() * 0.1;
-    const b = 0.0 + Math.random() * 0.1;
+    const b = Math.random() * 0.1;
 
     const rockMat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(r, g, b),
