@@ -11,6 +11,7 @@
 <body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
 <script>
   // ==========================================
@@ -220,16 +221,8 @@
   }
 
   // ==========================================
-  // 9. MOVING OBJECTS (C2: Predefined & Random)
+  // 9. GREEN DRONES (C2)
   // ==========================================
-  const redCarGeo = new THREE.BoxGeometry(2, 1, 4);
-  const redCarMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xaa0000 });
-  const redCar = new THREE.Mesh(redCarGeo, redCarMat);
-  redCar.castShadow = true;
-  scene.add(redCar);
-  let redCarAngle = 0;
-
-  // Drones
   const drones = [];
   const droneGeo = new THREE.SphereGeometry(0.5, 8, 8);
   const droneMat = new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00 });
@@ -238,7 +231,6 @@
     let drone = new THREE.Mesh(droneGeo, droneMat);
     drone.position.set(Math.random() * 20 - 10, 5, Math.random() * 20 - 10);
 
-    // Notice Y velocity is 0 now. Hover math handles Y!
     drone.userData.velocity = new THREE.Vector3(
       (Math.random() - 0.5) * 0.3,
       0,
@@ -249,21 +241,51 @@
   }
 
   // ==========================================
-  // 10. CONTROLLABLE OBJECT (C1: Player Car)
+  // 10. CAR MODELS & HITBOXES (C1, C2)
   // ==========================================
-  const playerGeo = new THREE.BoxGeometry(2, 1, 4);
-  const playerMat = new THREE.MeshStandardMaterial({ color: 0x0066ff });
-  const playerCar = new THREE.Mesh(playerGeo, playerMat);
+  const gltfLoader = new THREE.GLTFLoader();
 
+  // --- 1. Invisible Hitbox for the Predefined Path Car ---
+  const carGeo = new THREE.BoxGeometry(2, 1, 4);
+  const invisibleMat = new THREE.MeshStandardMaterial({ visible: false }); // Makes the box invisible
+
+  const redCar = new THREE.Mesh(carGeo, invisibleMat);
+  scene.add(redCar);
+  let redCarAngle = 0;
+
+  // --- 2. Invisible Hitbox for the Player Car ---
+  const playerCar = new THREE.Mesh(carGeo, invisibleMat);
   playerCar.position.set(0, 1.01, 35);
-  playerCar.castShadow = true;
   scene.add(playerCar);
 
   const keys = { w: false, a: false, s: false, d: false };
   document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
   document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
-
   const playerHitbox = new THREE.Box3();
+
+  // --- 3. Load the 3D Model ONCE and clone it ---
+  gltfLoader.load('models/25042_Perseverance.glb', (gltf) => {
+    const playerModel = gltf.scene;
+
+    // Turn on shadows for the imported 3D model
+    playerModel.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+
+    // NOTE: You may need to tweak these numbers if your downloaded car is too big, too small, or flying
+    playerModel.scale.set(1, 1, 1);
+    playerModel.position.y = -0.5; // Drops the model so the wheels touch the ground, not the center of the invisible box
+
+    // Create a perfect copy of the loaded model for the second car
+    const aiModel = playerModel.clone();
+
+    // Attach the 3D models to your invisible hitboxes!
+    playerCar.add(playerModel);
+    redCar.add(aiModel);
+  });
 
   // ==========================================
   // 11. MASTER ANIMATION LOOP
@@ -271,7 +293,7 @@
   function animate() {
     requestAnimationFrame(animate);
 
-    // --- Predefined Path (Red Car) ---
+    // --- Predefined Path (AI Car) ---
     redCarAngle += 0.015;
     const trackRadius = 35;
     const currentX = Math.cos(redCarAngle) * trackRadius * 1.5;
@@ -284,15 +306,12 @@
 
     // --- Hovering & Gliding (Green Drones) ---
     for (let drone of drones) {
-      // Move strictly horizontally
       drone.position.x += drone.userData.velocity.x;
       drone.position.z += drone.userData.velocity.z;
 
-      // Keep inside a wide boundary
       if(drone.position.x < -40 || drone.position.x > 40) drone.userData.velocity.x *= -1;
       if(drone.position.z < -40 || drone.position.z > 40) drone.userData.velocity.z *= -1;
 
-      // 1. Check ground height beneath drone
       let dx = drone.position.x;
       let dz = drone.position.z;
       let dHeight = Math.sin(dx / 10) * Math.cos(dz / 10) * 5;
@@ -304,20 +323,14 @@
         else if (dDist > 40 && dDist < 45) dHeight = dHeight * (1 - ((45 - dDist) / 5)) + 0.5 * ((45 - dDist) / 5);
       }
 
-      // Base target height: float 2 units above the dirt
       let targetY = dHeight + 2.0;
 
-      // 2. Check rock heights beneath drone
       for (let rockBox of rockHitboxes) {
-        // If the drone is inside the X/Z space of a rock
         if (dx >= rockBox.min.x && dx <= rockBox.max.x &&
           dz >= rockBox.min.z && dz <= rockBox.max.z) {
-          // Target height becomes the top of the rock + a 1.5 unit gap
           targetY = Math.max(targetY, rockBox.max.y + 1.5);
         }
       }
-
-      // 3. Smoothly glide up or down towards the target height
       drone.position.y += (targetY - drone.position.y) * 0.1;
     }
 
