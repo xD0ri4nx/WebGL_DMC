@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>WebGL Project - Martian Edition (Original Lighting + LED Poles)</title>
+  <title>WebGL Project - Martian Edition (P1, P2, P3, C1, C2)</title>
   <style>
     body { margin: 0; overflow: hidden; background-color: #000; }
     canvas { display: block; }
@@ -237,14 +237,14 @@
   }
 
   // ==========================================
-  // 9. GREEN DRONES (C2)
+  // 9. DRONES (C2) - Invisible Hitboxes
   // ==========================================
   const drones = [];
   const droneGeo = new THREE.SphereGeometry(0.5, 8, 8);
-  const droneMat = new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00 });
+  const invisibleDroneMat = new THREE.MeshStandardMaterial({ visible: false }); // Makes the sphere invisible
 
   for(let i = 0; i < 5; i++) {
-    let drone = new THREE.Mesh(droneGeo, droneMat);
+    let drone = new THREE.Mesh(droneGeo, invisibleDroneMat);
     drone.position.set(Math.random() * 20 - 10, 5, Math.random() * 20 - 10);
 
     drone.userData.velocity = new THREE.Vector3(
@@ -263,7 +263,7 @@
 
   // --- 1. Invisible Hitbox for the Predefined Path Car ---
   const carGeo = new THREE.BoxGeometry(2, 1, 4);
-  const invisibleMat = new THREE.MeshStandardMaterial({ visible: false });
+  const invisibleMat = new THREE.MeshStandardMaterial({ visible: false }); // Makes the box invisible
 
   const redCar = new THREE.Mesh(carGeo, invisibleMat);
   scene.add(redCar);
@@ -279,11 +279,11 @@
   document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
   const playerHitbox = new THREE.Box3();
 
-  // --- 3. Load the 3D Model ONCE and clone it ---
+  // --- 3. Load the Rover Model ONCE and clone it ---
   gltfLoader.load('models/25042_Perseverance.glb', (gltf) => {
     const playerModel = gltf.scene;
 
-    // Turn on shadows for the imported 3D model
+    // Turn ON shadows for the imported rover model
     playerModel.traverse((child) => {
       if (child.isMesh) {
         child.castShadow = true;
@@ -292,14 +292,35 @@
     });
 
     playerModel.scale.set(1, 1, 1);
-    playerModel.position.y = -0.5;
+    playerModel.position.y = -0.5; // Drops the model so the wheels touch the ground
 
-    // Create a perfect copy of the loaded model for the second car
     const aiModel = playerModel.clone();
 
     // Attach the 3D models to your invisible hitboxes!
     playerCar.add(playerModel);
     redCar.add(aiModel);
+  });
+
+  // --- 4. Load the Drone Model ---
+  gltfLoader.load('models/drone.glb', (gltf) => {
+    const droneModel = gltf.scene;
+
+    // Turn OFF shadows for the drone to optimize performance
+    droneModel.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = false;
+        child.receiveShadow = true;
+      }
+    });
+
+    // Scale set exactly to 0.01 as requested
+    droneModel.scale.set(0.01, 0.01, 0.01);
+    droneModel.position.y = -0.5;
+
+    // Loop through all 5 invisible drone hitboxes and attach a clone
+    for (let invisibleDrone of drones) {
+      invisibleDrone.add(droneModel.clone());
+    }
   });
 
   // ==========================================
@@ -323,6 +344,11 @@
     for (let drone of drones) {
       drone.position.x += drone.userData.velocity.x;
       drone.position.z += drone.userData.velocity.z;
+
+      // Make the 3D model face the direction it is flying
+      const lookX = drone.position.x + drone.userData.velocity.x;
+      const lookZ = drone.position.z + drone.userData.velocity.z;
+      drone.lookAt(lookX, drone.position.y, lookZ);
 
       if(drone.position.x < -40 || drone.position.x > 40) drone.userData.velocity.x *= -1;
       if(drone.position.z < -40 || drone.position.z > 40) drone.userData.velocity.z *= -1;
