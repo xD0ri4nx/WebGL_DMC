@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>WebGL Project - Martian Edition (P1, P2, P3, C1, C2)</title>
+  <title>WebGL Project - Martian Edition (Original Lighting + LED Poles)</title>
   <style>
     body { margin: 0; overflow: hidden; background-color: #000; }
     canvas { display: block; }
@@ -178,10 +178,17 @@
   }
 
   // ==========================================
-  // 8. STREETLIGHTS (P3)
+  // 8. LED STRIP LIGHT POLES (P3)
   // ==========================================
   const poleGeo = new THREE.CylinderGeometry(0.2, 0.2, 8);
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+
+  const ledGeo = new THREE.BoxGeometry(0.1, 7.5, 0.1);
+  const ledMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    emissive: 0xffaa00, // Neon sci-fi orange glow
+    emissiveIntensity: 3
+  });
 
   const numLights = 8;
   for (let i = 0; i < numLights; i++) {
@@ -199,10 +206,19 @@
       else if (d > 40 && d < 45) height = height * (1 - ((45 - d) / 5)) + trackHeight * ((45 - d) / 5);
     }
 
-    let pole = new THREE.Mesh(poleGeo, poleMat);
-    pole.position.set(x, height + 4, z);
-    pole.castShadow = true;
-    scene.add(pole);
+    let poleGroup = new THREE.Group();
+    poleGroup.position.set(x, height + 4, z);
+
+    let poleBase = new THREE.Mesh(poleGeo, poleMat);
+    poleBase.castShadow = true;
+    poleGroup.add(poleBase);
+
+    let ledStrip = new THREE.Mesh(ledGeo, ledMat);
+    ledStrip.position.set(0, 0, 0.2);
+    poleGroup.add(ledStrip);
+
+    poleGroup.lookAt(0, height + 4, 0);
+    scene.add(poleGroup);
 
     let spotLight = new THREE.SpotLight(0xffddaa, 2);
     spotLight.position.set(x, height + 8, z);
@@ -247,7 +263,7 @@
 
   // --- 1. Invisible Hitbox for the Predefined Path Car ---
   const carGeo = new THREE.BoxGeometry(2, 1, 4);
-  const invisibleMat = new THREE.MeshStandardMaterial({ visible: false }); // Makes the box invisible
+  const invisibleMat = new THREE.MeshStandardMaterial({ visible: false });
 
   const redCar = new THREE.Mesh(carGeo, invisibleMat);
   scene.add(redCar);
@@ -275,9 +291,8 @@
       }
     });
 
-    // NOTE: You may need to tweak these numbers if your downloaded car is too big, too small, or flying
     playerModel.scale.set(1, 1, 1);
-    playerModel.position.y = -0.5; // Drops the model so the wheels touch the ground, not the center of the invisible box
+    playerModel.position.y = -0.5;
 
     // Create a perfect copy of the loaded model for the second car
     const aiModel = playerModel.clone();
